@@ -247,6 +247,7 @@ class FrameStepper(Interface):
 
     def __init__(self, config: ShowBaseConfig = DEFAULT_FBF_CONFIG):
         Interface.__init__(self, config=config)
+        self._scene_initialized: bool = False
 
         # Aim to render 10000 FPS so the clock doesn't sleep between frames
         Global.clock.setMode(ClockObject.MLimited)
@@ -258,6 +259,14 @@ class FrameStepper(Interface):
         size: tuple[int, int] = (int(1.6 * 720), 720),
         fps: float = 30.0,
     ) -> Generator:
+        # When reusing a FrameStepper, make sure any previous scene is fully
+        # torn down before creating a new one. This prevents scene graph and
+        # task state from accumulating across shots, which can degrade
+        # performance over time.
+        if self._scene_initialized:
+            self.close_scene()
+        self._scene_initialized = True
+
         continuize(system, dt=1 / fps, inplace=True)
 
         multisystem.reset()
