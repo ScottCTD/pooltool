@@ -224,26 +224,34 @@ class TableRender(Render):
         color: tuple[float, float, float, float],
         segments: int = 48,
     ) -> GeomNode:
-        """Generate a filled 2D circle mesh."""
+        """Generate a filled 2D square mesh.
+
+        The ``radius`` parameter is treated as half the side length so that the
+        square has the same width/height as a circle of the same radius.
+        """
         vdata = GeomVertexData(
             "pocket_marker", GeomVertexFormat.getV3c4(), Geom.UHStatic
         )
         vertex = GeomVertexWriter(vdata, "vertex")
         colors = GeomVertexWriter(vdata, "color")
 
-        vertex.addData3(center[0], center[1], center[2])
-        colors.addData4f(*color)
+        half_side = radius
+        cx, cy, cz = center
 
-        for i in range(segments + 1):
-            theta = (2 * np.pi * i) / segments
-            x = center[0] + radius * np.cos(theta)
-            y = center[1] + radius * np.sin(theta)
-            vertex.addData3(x, y, center[2])
+        corners = [
+            (cx - half_side, cy - half_side, cz),
+            (cx + half_side, cy - half_side, cz),
+            (cx + half_side, cy + half_side, cz),
+            (cx - half_side, cy + half_side, cz),
+        ]
+
+        for x, y, z in corners:
+            vertex.addData3(x, y, z)
             colors.addData4f(*color)
 
         triangles = GeomTriangles(Geom.UHStatic)
-        for i in range(1, segments):
-            triangles.addVertices(0, i, i + 1)
+        triangles.addVertices(0, 1, 2)
+        triangles.addVertices(0, 2, 3)
         triangles.closePrimitive()
 
         geom = Geom(vdata)
@@ -260,7 +268,7 @@ MARKER_Z_OFFSET = 0.06
 POCKET_MARKER_COLORS = {
     "lb": (1.00, 0.00, 0.00, 1.0),  # Red
     "lc": (1.00, 0.40, 0.00, 1.0),  # Orange
-    "lt": (0.75, 0.75, 0.75, 1.0),  # Grey
+    "lt": (0.5, 0.5, 0.5, 1.0),  # Grey
     "rb": (0.00, 1.00, 0.25, 1.0),  # Green
     "rc": (0.00, 0.25, 1.00, 1.0),  # Blue
     "rt": (0.75, 0.00, 1.00, 1.0),  # Purple
